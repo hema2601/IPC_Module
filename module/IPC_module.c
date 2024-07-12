@@ -2,7 +2,8 @@
 #include <linux/module.h>
 #include <linux/kprobes.h>
 #include <linux/bpf.h>
-
+#include<linux/proc_fs.h>
+#include<linux/seq_file.h>
 
 #define NUM_FUNCS 1
 
@@ -53,8 +54,6 @@ static uint64_t read_msr(uint32_t addr){
                                 : "rdx"
                                 );
 
-        //printk("MSR 0x%x = %llx\n", addr, ret);
-
         return ret;
 
 
@@ -76,10 +75,6 @@ static void get_counters(uint64_t *values){
 	//rdmsr for instrtuctions
 	inst = read_msr(FIXED_CTR_INST);
 
-
-	//write to proc file
-//	printk("Cyc:%llu\tInst:%llu\n", cycles, inst);
-
 	values[0] = cycles;
 	values[1] = inst;
 
@@ -94,7 +89,6 @@ static int handler_pre (struct kretprobe_instance *ri, struct pt_regs *regs){
 	//get cpu number
 	cpu_id = smp_processor_id();
 	tmps->id = cpu_id;
-
 
 	//get counters
 	get_counters(values);
@@ -113,8 +107,6 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 	int cpu_id = smp_processor_id();
 	struct priv_data *tmps = (struct priv_data*)ri->data;
 
-	//printk("CPU %d: ", cpu_id);
-
 	//get counters
 	get_counters(values);
 
@@ -130,7 +122,13 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 	values[1] -= tmps->tmp_inst;	
 
 	//update proc
-	printk("CPU %d: Cyc:%llu\tInst:%llu\n", cpu_id, values[0], values[1]);
+	//printk("CPU %d: Cyc:%llu\tInst:%llu\n", cpu_id, values[0], values[1]);
+	
+	//[TODO] This is hardcoded. Find a way to make this dynamic for different kprobes
+	if(NUM_FUNCS == 1){
+		targets[0].cyc[cpu_id] = values[0];
+		targets[0].inst[cpu_id] = values[1];
+	}
 	
 	return 0;
 
@@ -182,6 +180,52 @@ static int register_kp(void){
 
 }
 
+static int my_proc_show(struct seq_file *m,void *v){
+	
+	int i;
+
+	seq_printf(m, "Monitoring: %s\n", targets[0].fn_name );
+	seq_printf(m, "CPU\tInstructions\tCycles\n" );
+	
+	for(i = 0; i < CPU_CORES; i++){
+
+		seq_printf(m, "CPU %d:\t%llu\t\t%llu\n", i, targets[0].inst[i], targets[0].cyc[i]);
+
+	
+	}
+	
+	return 0;
+}
+
+
+static int my_proc_open(struct inode *inode,struct file *file){
+	return single_open(file,my_proc_show,NULL);
+}
+
+static struct proc_ops my_fops={
+	//.owner = THIS_MODULE,
+	.proc_open = my_proc_open,
+	.proc_release = single_release,
+	.proc_read = seq_read,
+	.proc_lseek = seq_lseek
+};
+
+
+static int create_proc(void){
+
+	struct proc_dir_entry *entry;
+	
+	entry = proc_create("IPC_module",0777,NULL,&my_fops);
+	if(!entry){
+		return -1;	
+	}else{
+		printk(KERN_INFO "create proc file successfully\n");
+	}
+	return 0;
+
+}
+
+
 static int __init init_ipc_mod(void){
 	int ret;
 
@@ -196,6 +240,13 @@ static int __init init_ipc_mod(void){
 	ret = activate_hw_count();
 	if(ret < 0){
 		printk(KERN_ERR "IPC_Module could not activate Hardware Counters (%d)\n", ret);
+		return ret;
+	}
+
+	//create proc
+	ret = create_proc();
+	if(ret < 0){
+		printk(KERN_ERR "IPC_Module could not setup proc (%d)\n", ret);
 		return ret;
 	}
 
