@@ -54,6 +54,7 @@ static uint64_t read_msr(uint32_t addr){
                                 : "rdx"
                                 );
 
+
         return ret;
 
 
