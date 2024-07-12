@@ -275,6 +275,9 @@ static void __exit exit_ipc_mod(void){
 	
 	//deactivate hw counters
 
+	//remove proc
+	remove_proc_entry("IPC_module", NULL);
+	
 }
 
 module_init(init_ipc_mod)
