@@ -191,30 +191,14 @@ static int register_kp(void){
 	return 0;
 
 }
-/*
-static int my_proc_show(struct seq_file *m,void *v){
-	
-	int i, j;
-
-	for(j = 0; j < NUM_FUNCS; j++)
-		seq_printf(m, "%50s\t", targets[j].fn_name );
-
-	seq_printf(m, "CPU\tInstructions\tCycles\n" );
-	
-	for(i = 0; i < CPU_CORES; i++){
-		seq_printf(m, "CPU %d:\t", i);
-
-		for(j = 0; j < NUM_FUNCS; j++)
-			seq_printf(m, "%llu\t\t%llu\t\t\t", targets[j].inst[i], targets[j].cyc[i]);
-	
-	}
-	
-	return 0;
-}*/
 
 static int my_proc_show(struct seq_file *m,void *v){
 
         int i, j;
+
+		
+
+        seq_printf(m, "Count: %d\n", NUM_FUNCS );
 
         for(j = 0; j < NUM_FUNCS; j++)
                 seq_printf(m, "%30s\t\t", targets[j].fn_name );
