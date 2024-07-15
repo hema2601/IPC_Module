@@ -5,9 +5,9 @@
 #include<linux/proc_fs.h>
 #include<linux/seq_file.h>
 
-#define NUM_FUNCS 1
+#define NUM_FUNCS 3
 
-#define MAX_NAME_LEN 50
+#define MAX_NAME_LEN 30
 #define CPU_CORES 36
 
 #define FIXED_CTR_INST 0x309U
@@ -18,7 +18,6 @@ struct target {
 	char fn_name[50];
 	uint64_t inst[CPU_CORES];
 	uint64_t cyc[CPU_CORES];
-	double IPC[CPU_CORES];
 
 };
 
@@ -33,7 +32,14 @@ struct priv_data{
 static struct target targets[NUM_FUNCS] = {
 		{
 			.fn_name = "net_rx_action"
+		},
+		{
+			.fn_name = "__netif_receive_skb_core"
+		},
+		{
+			.fn_name = "napi_gro_receive"
 		}
+	
 };
 
 
@@ -107,6 +113,7 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 	uint64_t values[2];
 	int cpu_id = smp_processor_id();
 	struct priv_data *tmps = (struct priv_data*)ri->data;
+	int64_t idx = (ri->rph->rp - krp); 
 
 	//get counters
 	get_counters(values);
@@ -124,12 +131,16 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 
 	//update proc
 	//printk("CPU %d: Cyc:%llu\tInst:%llu\n", cpu_id, values[0], values[1]);
+
+	//Test
+	//printk("%s: %lld\n", ri->rph->rp->kp.symbol_name, idx);
+
 	
 	//[TODO] This is hardcoded. Find a way to make this dynamic for different kprobes
-	if(NUM_FUNCS == 1){
-		targets[0].cyc[cpu_id] = values[0];
-		targets[0].inst[cpu_id] = values[1];
-	}
+	//if(NUM_FUNCS == 1){
+	targets[idx].cyc[cpu_id] = values[0];
+	targets[idx].inst[cpu_id] = values[1];
+	//}
 	
 	return 0;
 
@@ -180,23 +191,54 @@ static int register_kp(void){
 	return 0;
 
 }
-
+/*
 static int my_proc_show(struct seq_file *m,void *v){
 	
-	int i;
+	int i, j;
 
-	seq_printf(m, "Monitoring: %s\n", targets[0].fn_name );
+	for(j = 0; j < NUM_FUNCS; j++)
+		seq_printf(m, "%50s\t", targets[j].fn_name );
+
 	seq_printf(m, "CPU\tInstructions\tCycles\n" );
 	
 	for(i = 0; i < CPU_CORES; i++){
+		seq_printf(m, "CPU %d:\t", i);
 
-		seq_printf(m, "CPU %d:\t%llu\t\t%llu\n", i, targets[0].inst[i], targets[0].cyc[i]);
-
+		for(j = 0; j < NUM_FUNCS; j++)
+			seq_printf(m, "%llu\t\t%llu\t\t\t", targets[j].inst[i], targets[j].cyc[i]);
 	
 	}
 	
 	return 0;
+}*/
+
+static int my_proc_show(struct seq_file *m,void *v){
+
+        int i, j;
+
+        for(j = 0; j < NUM_FUNCS; j++)
+                seq_printf(m, "%30s\t\t", targets[j].fn_name );
+
+        seq_printf(m, "\n");
+
+        seq_printf(m, "CPU\t" );
+        for(j = 0; j < NUM_FUNCS; j++)
+                seq_printf(m,"Instructions\tCycles\t\t\t");
+        seq_printf(m, "\n");
+
+        for(i = 0; i < CPU_CORES; i++){
+                seq_printf(m, "CPU %d:\t", i);
+
+                for(j = 0; j < NUM_FUNCS; j++)
+                        seq_printf(m, "%llu\t\t%llu\t\t\t", targets[j].inst[i], targets[j].cyc[i]);
+                seq_printf(m, "\n");
+
+        }
+
+        return 0;
 }
+
+
 
 
 static int my_proc_open(struct inode *inode,struct file *file){
