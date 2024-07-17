@@ -30,7 +30,7 @@ void get_func_names(char *line, char **names, int count){
 
 }
 
-void print_cpu_ipc(char *line, char **names, int count, long long unsigned t){
+void print_cpu_ipc(char *line, char **names, int count, long long unsigned t, long long unsigned ***prev, int *cpu){
 
 	int id;
 	long long unsigned int inst, cyc;
@@ -51,8 +51,12 @@ void print_cpu_ipc(char *line, char **names, int count, long long unsigned t){
 		token = strtok(NULL, "\t");
 		cyc = atoi(token);
 		
-		printf("{ \"t\" : %llu, \"CPU\" : %d, \"Symbol\" : %s, \"Inst\" : %llu, \"Cyc\" : %llu},\n", t, id, names[idx], inst, cyc);
+		if(inst != prev[idx][id - cpu[0]][0] || cyc != prev[idx][id-cpu[0]][1]){
 
+			printf("{ \"t\" : %llu, \"CPU\" : %d, \"Symbol\" : \"%s\", \"Inst\" : %llu, \"Cyc\" : %llu},\n", t, id, names[idx], inst, cyc);
+			prev[idx][id-cpu[0]][0] = inst;
+			prev[idx][id-cpu[0]][1] = cyc;
+		}
 		idx++;
 	}
 
@@ -88,10 +92,8 @@ int main(int argc, char *argv[]){
 	FILE *fp = fopen("/proc/IPC_module", "r");
 
 	if(!fp){
-
 		printf("Failed to open /proc/IPC_module. Is the module loaded?");
 		exit(1);
-
 	}
 
 	long long unsigned t = 0;
@@ -99,23 +101,25 @@ int main(int argc, char *argv[]){
 	int count;
 	char ** names;
 	int cpu[2];
-
+	long long unsigned ***prev;
 
 	//SET CPUs TO MONITOR
-	cpu[0] = 1;
-	cpu[1] = 7;
+	cpu[0] = 0;
+	cpu[1] = 5;
 	
-
+	//Get number of functions
 	fscanf(fp, "Count: %d\n", &count);
 
-	printf("Monitoring %d functions\n", count);
-
-
+	//Allocate relevant data structures
 	names = (char **)malloc(sizeof(char*) * count);
+	prev = (long long unsigned ***)malloc(sizeof(long long unsigned**) * count);
 	for(int i = 0; i < count; i++){
 		names[i] = (char*)malloc(sizeof(char) * MAX_NAME);
+		prev[i] = (long long unsigned **)calloc(sizeof(long long unsigned*), cpu[1]-cpu[0]+1);
+		for(int j = 0; j < cpu[1]-cpu[0]+1; j++){
+			prev[i][j] = (long long unsigned *)calloc(sizeof(long long unsigned), 2);
+		}
 	}
-
 	
 	//get function names
 	fgets(line, MAX_LINE, fp);
@@ -127,26 +131,37 @@ int main(int argc, char *argv[]){
 	int cpu_count = 0;	
 
 
-	//LOOP
-	while(t < 1){
+	printf("[");
+
+	while(t < 100000){
 		
 		fseek(fp, offset, SEEK_SET);
-		
+
 		//read proc file
 		while(cpu_count < cpu[1] - cpu[0] + 1 && fgets(line, MAX_LINE, fp) != NULL){
-			print_cpu_ipc(line, names, count, t);
+			print_cpu_ipc(line, names, count, t, prev, cpu);
 			cpu_count++;
 		}
 		t++;
+		cpu_count = 0;
+
+		//Close and reopen proc file to regenerate it
+		fclose(fp);
+		fp = fopen("/proc/IPC_module", "r");
 
 	}
 	
+	printf("]");
 
 	//deallocate
 	for(int i = 0; i < count; i++){
 		free(names[i]);
+		for(int j = 0; j < cpu[1] - cpu[0] + 1; j++)
+			free(prev[i][j]);
+		free(prev[i]);
 	}
 	free(names);
+	free(prev);
 
 
 }

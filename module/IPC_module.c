@@ -124,23 +124,17 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 		return 0;
 	
 	}
+ 
+	//calculate difference + Overflow Consideration
+	if(likely(values[0] > tmps->tmp_cyc))	values[0] -= tmps->tmp_cyc;
+	else									values[0] += 0xFFFFFFFFFFFFFFFFU - tmps->tmp_cyc;							
+	if(likely(values[1] > tmps->tmp_inst))	values[1] -= tmps->tmp_inst;	
+	else									values[1] += 0xFFFFFFFFFFFFFFFFU - tmps->tmp_inst;
 
-	//calculate difference
-	values[0] -= tmps->tmp_cyc;	
-	values[1] -= tmps->tmp_inst;	
 
-	//update proc
-	//printk("CPU %d: Cyc:%llu\tInst:%llu\n", cpu_id, values[0], values[1]);
-
-	//Test
-	//printk("%s: %lld\n", ri->rph->rp->kp.symbol_name, idx);
-
-	
-	//[TODO] This is hardcoded. Find a way to make this dynamic for different kprobes
-	//if(NUM_FUNCS == 1){
+	//Update Values	
 	targets[idx].cyc[cpu_id] = values[0];
 	targets[idx].inst[cpu_id] = values[1];
-	//}
 	
 	return 0;
 
