@@ -16,8 +16,9 @@
 struct target {
 
 	char fn_name[50];
-	uint64_t inst[CPU_CORES];
-	uint64_t cyc[CPU_CORES];
+	uint8_t curr[CPU_CORES];
+	uint64_t inst[CPU_CORES][2];
+	uint64_t cyc[CPU_CORES][2];
 
 };
 
@@ -114,6 +115,8 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 	int cpu_id = smp_processor_id();
 	struct priv_data *tmps = (struct priv_data*)ri->data;
 	int64_t idx = (ri->rph->rp - krp); 
+	uint8_t curr = targets[idx].curr[cpu_id];
+
 
 	//get counters
 	get_counters(values);
@@ -133,8 +136,11 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 
 
 	//Update Values	
-	targets[idx].cyc[cpu_id] = values[0];
-	targets[idx].inst[cpu_id] = values[1];
+	targets[idx].cyc[cpu_id][curr] = values[0];
+	targets[idx].inst[cpu_id][curr] = values[1];
+	
+	//Update Target Buffer
+	targets[idx].curr[cpu_id] = !curr;
 	
 	return 0;
 
@@ -208,7 +214,7 @@ static int my_proc_show(struct seq_file *m,void *v){
                 seq_printf(m, "CPU %d:\t", i);
 
                 for(j = 0; j < NUM_FUNCS; j++)
-                        seq_printf(m, "%llu\t\t%llu\t\t\t", targets[j].inst[i], targets[j].cyc[i]);
+                        seq_printf(m, "%llu\t\t%llu\t\t\t", targets[j].inst[i][!targets[j].curr[i]], targets[j].cyc[i][!targets[j].curr[i]]);
                 seq_printf(m, "\n");
 
         }
