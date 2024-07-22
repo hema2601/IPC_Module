@@ -23,7 +23,7 @@
 				"width": 10000,
 				"height": 80,
 				"data": {
-					"url":"data/medium_6_new_3/data.json"
+					"url":"data/test_experiment4/data.json"
 				},
 				"mark": "line",
 				"transform": [
@@ -45,7 +45,7 @@ var Inst_Cyc_Scatter1 = {
 	"width": 400,
 	"height": 400,
 	"data": {
-		"url":"data/medium_6_new_3/data.json"
+		"url":"data/test_experiment4/data.json"
 	},
 	"transform": [
 		{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
@@ -95,7 +95,7 @@ var Inst_Cyc_Scatter2 = {
 	"width": 400,
 	"height": 400,
 	"data": {
-		"url":"data/medium_6_new_3/data.json"
+		"url":"data/test_experiment4/data.json"
 	},
 	"transform": [
 		{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
@@ -145,7 +145,7 @@ var Inst_Cyc_Scatter3 = {
 	"width": 400,
 	"height": 400,
 	"data": {
-		"url":"data/medium_6_new_3/data.json"
+		"url":"data/test_experiment4/data.json"
 	},
 	"transform": [
 		{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
@@ -186,7 +186,7 @@ var Inst_Cyc_Scatter3 = {
 var IPC_Histo = {
 		"title":"Entry Counts",	
 		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-			"data": {"url": "data/medium_6_new_3/data.json"},
+			"data": {"url": "data/test_experiment4/data.json"},
 			"mark": "bar",
 	"transform": [
 		{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
@@ -208,7 +208,7 @@ var IPC_Box =
 	{
 		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
 		"description": "A vertical box plot showing median, min, and max body mass of penguins.",
-		"data": {"url": "data/medium_6_new_3/data.json"},
+		"data": {"url": "data/test_experiment4/data.json"},
 		"mark": {
 			"type": "boxplot",
 			"extent": "min-max"
@@ -234,7 +234,7 @@ var pkt_bar =
 "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
 		"description": "Pkts received per NIC Queue",
 		"data": {
-		 	"url": "data/medium_6_new_3/packet_cnt.json"
+		 	"url": "data/test_experiment4/packet_cnt.json"
 		},
 		"mark": "bar",
 		"transform": [
@@ -252,7 +252,7 @@ var sirq_bar =
 		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
 		"description": "NET_RX softirqs received per core",
 		"data": {
-			"url": "data/medium_6_new_3/softirq.json"
+			"url": "data/test_experiment4/softirq.json"
 		},
 		"mark": "bar",
 		"transform": [
@@ -270,7 +270,7 @@ var hirq_bar =
 		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
 		"description": "NET_RX softirqs received per core",
 		"data": {
-			"url": "data/medium_6_new_3/irq.json"
+			"url": "data/test_experiment4/irq.json"
 		},
 		"mark": "bar",
 		"transform": [

@@ -53,7 +53,8 @@ class JsonGenerator:
 class SOFTIRQGen(JsonGenerator):
     def generate_json(self):
         print("Generate softirq.json")
-        self.f.truncate(0)
+        self.f.seek(0)
+        self.f.truncate()
         json.dump(self.json_dict, self.f, indent=0)
 
     def read_source(self):
@@ -83,7 +84,8 @@ class SOFTIRQGen(JsonGenerator):
 class IRQGen(JsonGenerator):
     def generate_json(self):
         print("Generate irq.json")
-        self.f.truncate(0)
+        self.f.seek(0)
+        self.f.truncate()
         json.dump(self.json_dict, self.f, indent=0)
 
     def read_source(self):
@@ -121,7 +123,8 @@ class PACKET_CNTGen(JsonGenerator):
 
     def generate_json(self):
         print("Generate packet_cnt.json")
-        self.f.truncate(0)
+        self.f.seek(0)
+        self.f.truncate()
         json.dump(self.json_dict, self.f, indent=0)
 
     def read_source(self):

@@ -91,6 +91,8 @@ void print_cpu_ipc(char *line, char **names, int count, long long unsigned t, lo
 
 	int idx = 0;
 
+	int first = (ftell(json_fp) == 1);
+
 	while(idx < count && token != NULL){
 		
 		//Instructions
@@ -103,8 +105,11 @@ void print_cpu_ipc(char *line, char **names, int count, long long unsigned t, lo
 		cyc = atoi(token);
 		
 		if(inst != prev[idx][id - cpu[0]][0] || cyc != prev[idx][id-cpu[0]][1]){
+			
+			if(first) first = 0;
+			else fputc(',', json_fp);
 
-			fprintf(json_fp, "{ \"t\" : %llu, \"CPU\" : %d, \"Symbol\" : \"%s\", \"Inst\" : %llu, \"Cyc\" : %llu},\n", t, id, names[idx], inst, cyc);
+			fprintf(json_fp, "{ \"t\" : %llu, \"CPU\" : %d, \"Symbol\" : \"%s\", \"Inst\" : %llu, \"Cyc\" : %llu}\n", t, id, names[idx], inst, cyc);
 			prev[idx][id-cpu[0]][0] = inst;
 			prev[idx][id-cpu[0]][1] = cyc;
 		}
@@ -179,7 +184,7 @@ int createFiles(struct arguments *args, FILE **json){
 
 	printf("Creating data file called: %s\n", tmp);
 
-	*json = fopen(tmp, "w");
+	*json = fopen(tmp, "w+");
 
 	return 0;
 
@@ -260,6 +265,8 @@ int main(int argc, char *argv[]){
 
 	fprintf(json_fp, "[");
 
+	int first = 1;
+
 	while(t < arguments.time){
 		
 		fseek(fp, offset, SEEK_SET);
@@ -268,6 +275,7 @@ int main(int argc, char *argv[]){
 		while(cpu_count < cpu[1] - cpu[0] + 1 && fgets(line, MAX_LINE, fp) != NULL){
 			print_cpu_ipc(line, names, count, t, prev, cpu, json_fp);
 			cpu_count++;
+			
 		}
 		t++;
 		cpu_count = 0;
@@ -277,7 +285,6 @@ int main(int argc, char *argv[]){
 		fp = fopen("/proc/IPC_module", "r");
 
 	}
-	
 	fprintf(json_fp, "]");
 
 	//deallocate
