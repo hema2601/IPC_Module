@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 	<head>
-		<title>Embedding Vega-Lite</title>
+		<title>IPC Data</title>
 		<script src="https://cdn.jsdelivr.net/npm/vega@5.29.0"></script>
 		<script src="https://cdn.jsdelivr.net/npm/vega-lite@5.19.0"></script>
 		<script src="https://cdn.jsdelivr.net/npm/vega-embed@6.25.0"></script>
@@ -13,6 +13,9 @@
 		<div id="ipc_scat3"></div>
 		<div id="ipc_histo"></div>
 		<div id="ipc_box"></div>
+		<div id="pkt_bar"></div>
+		<div id="sirq_bar"></div>
+		<div id="hirq_bar"></div>
 
 		<script type="text/javascript">
 			var IPC_Time = {
@@ -20,14 +23,15 @@
 				"width": 10000,
 				"height": 80,
 				"data": {
-					"url":"data/small_data.json"
+					"url":"data/medium_6_new_3/data.json"
 				},
 				"mark": "line",
 				"transform": [
 					{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
+				
 					{"filter": "datum.IPC < 5"},
-		{"filter": "datum.Cyc < 16000000000000000000"}
-				],
+		{"filter": "datum.Cyc < 16000000000000000000"},
+					],
 				"encoding": {
 					"x": {"field": "t", "type": "temporal"},
 					"y": {"field": "IPC", "type": "quantitative"},
@@ -41,13 +45,13 @@ var Inst_Cyc_Scatter1 = {
 	"width": 400,
 	"height": 400,
 	"data": {
-		"url":"data/small_data.json"
+		"url":"data/medium_6_new_3/data.json"
 	},
 	"transform": [
 		{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
-		{"filter": "datum.IPC < 5"},
-		{"filter":"datum.Symbol == 'net_rx_action'"},
+					{"filter": "datum.IPC < 5"},
 		{"filter": "datum.Cyc < 16000000000000000000"},
+		{"filter":"datum.Symbol == 'net_rx_action'"},
 		{"extent": "Cyc", "param": "MaxCyc"},
     	{"extent": "Inst", "param": "MaxInst"}
 	],
@@ -56,12 +60,12 @@ var Inst_Cyc_Scatter1 = {
 			"mark": "point",
 			"transform": [
 				{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
-				{"filter": "datum.IPC < 5"},
+					{"filter": "datum.IPC < 5"},
+		{"filter": "datum.Cyc < 16000000000000000000"},
 
 				{
 					"filter":"datum.Symbol == 'net_rx_action'"
 				},
-				{"filter": "datum.Cyc < 16000000000000000000"}
 			],
 			"encoding": {
 				"x": {"field": "Cyc", "type": "quantitative"},
@@ -91,13 +95,13 @@ var Inst_Cyc_Scatter2 = {
 	"width": 400,
 	"height": 400,
 	"data": {
-		"url":"data/small_data.json"
+		"url":"data/medium_6_new_3/data.json"
 	},
 	"transform": [
 		{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
-		{"filter": "datum.IPC < 5"},
-		{"filter":"datum.Symbol == 'napi_gro_receive'"},
+					{"filter": "datum.IPC < 5"},
 		{"filter": "datum.Cyc < 16000000000000000000"},
+		{"filter":"datum.Symbol == 'napi_gro_receive'"},
 		{"extent": "Cyc", "param": "MaxCyc"},
     	{"extent": "Inst", "param": "MaxInst"}
 	],
@@ -141,13 +145,13 @@ var Inst_Cyc_Scatter3 = {
 	"width": 400,
 	"height": 400,
 	"data": {
-		"url":"data/small_data.json"
+		"url":"data/medium_6_new_3/data.json"
 	},
 	"transform": [
 		{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
-		{"filter": "datum.IPC < 5"},
-		{"filter":"datum.Symbol == '__netif_receive_skb_core'"},
+					{"filter": "datum.IPC < 5"},
 		{"filter": "datum.Cyc < 16000000000000000000"},
+		{"filter":"datum.Symbol == '__netif_receive_skb_list_core'"},
 		{"extent": "Cyc", "param": "MaxCyc"},
     	{"extent": "Inst", "param": "MaxInst"}
 	],
@@ -182,12 +186,12 @@ var Inst_Cyc_Scatter3 = {
 var IPC_Histo = {
 		"title":"Entry Counts",	
 		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-			"data": {"url": "data/small_data.json"},
+			"data": {"url": "data/medium_6_new_3/data.json"},
 			"mark": "bar",
 	"transform": [
 		{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
-		{"filter": "datum.IPC < 5"},
-		{"filter": "datum.Cyc < 16000000000000000000"}
+					{"filter": "datum.IPC < 5"},
+		{"filter": "datum.Cyc < 16000000000000000000"},
 	],
 			"encoding": {
 				"x": {
@@ -204,15 +208,15 @@ var IPC_Box =
 	{
 		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
 		"description": "A vertical box plot showing median, min, and max body mass of penguins.",
-		"data": {"url": "data/small_data.json"},
+		"data": {"url": "data/medium_6_new_3/data.json"},
 		"mark": {
 			"type": "boxplot",
 			"extent": "min-max"
 		},
 	"transform": [
 		{"calculate": "datum.Inst / datum.Cyc", "as": "IPC"},
-		{"filter": "datum.IPC < 5"},
-		{"filter": "datum.Cyc < 16000000000000000000"}
+					{"filter": "datum.IPC < 5"},
+		{"filter": "datum.Cyc < 16000000000000000000"},
 	],
 		"encoding": {
 			"x": {"field": "CPU", "type": "nominal"},
@@ -225,6 +229,62 @@ var IPC_Box =
 		}
 	}
 
+var pkt_bar = 
+	{
+"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+		"description": "Pkts received per NIC Queue",
+		"data": {
+		 	"url": "data/medium_6_new_3/packet_cnt.json"
+		},
+		"mark": "bar",
+		"transform": [
+			{"calculate": "datum.After - datum.Before", "as":"pkts"}
+		],
+		"encoding": {
+			"x": {"field": "Queue", "type": "nominal", "axis": {"labelAngle": 0}},
+			"y": {"field": "pkts", "type": "quantitative"},
+			"xOffset":{"field": "Type"},
+			"color":{"field":"Type"}
+		}
+	}
+var sirq_bar = 
+	{
+		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+		"description": "NET_RX softirqs received per core",
+		"data": {
+			"url": "data/medium_6_new_3/softirq.json"
+		},
+		"mark": "bar",
+		"transform": [
+			{"calculate": "datum.After - datum.Before", "as": "softirqs"}
+		],
+		"encoding": {
+			"x": {"field": "Core", "type": "nominal", "axis": {"labelAngle": 0}},
+			"y": {"field": "softirqs", "type": "quantitative"},
+			"xOffset":{"field": "Type"},
+			"color":{"field":"Type"}
+		}
+	}
+var hirq_bar = 
+	{
+		"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+		"description": "NET_RX softirqs received per core",
+		"data": {
+			"url": "data/medium_6_new_3/irq.json"
+		},
+		"mark": "bar",
+		"transform": [
+			{"calculate": "datum.After - datum.Before", "as": "irqs"}
+		],
+		"encoding": {
+			"x": {"field": "Queue", "type": "nominal", "axis": {"labelAngle": 0}},
+			"y": {"field": "irqs", "type": "quantitative"},
+		}
+	}
+
+
+
+
 
 
 vegaEmbed('#ipc_t', IPC_Time);
@@ -233,6 +293,9 @@ vegaEmbed('#ipc_scat2', Inst_Cyc_Scatter2);
 vegaEmbed('#ipc_scat3', Inst_Cyc_Scatter3);
 vegaEmbed('#ipc_histo', IPC_Histo);
 vegaEmbed('#ipc_box', IPC_Box);
+vegaEmbed('#pkt_bar', pkt_bar);
+vegaEmbed('#sirq_bar', sirq_bar);
+vegaEmbed('#hirq_bar', hirq_bar);
 		</script>
 	</body>
 </html>

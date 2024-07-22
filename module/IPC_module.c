@@ -16,9 +16,9 @@
 struct target {
 
 	char fn_name[50];
-	uint8_t curr[CPU_CORES];
-	uint64_t inst[CPU_CORES][2];
-	uint64_t cyc[CPU_CORES][2];
+	volatile uint8_t curr[CPU_CORES];
+	volatile uint64_t inst[CPU_CORES][2];
+	volatile uint64_t cyc[CPU_CORES][2];
 
 };
 
@@ -35,13 +35,15 @@ static struct target targets[NUM_FUNCS] = {
 			.fn_name = "net_rx_action"
 		},
 		{
-			.fn_name = "__netif_receive_skb_core"
+			.fn_name = "__netif_receive_skb_list_core"
 		},
 		{
 			.fn_name = "napi_gro_receive"
 		}
 	
 };
+
+static struct target targets_cp[NUM_FUNCS];
 
 
 static struct kprobe kp[NUM_FUNCS];
@@ -134,11 +136,15 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 	if(likely(values[1] > tmps->tmp_inst))	values[1] -= tmps->tmp_inst;	
 	else									values[1] += 0xFFFFFFFFFFFFFFFFU - tmps->tmp_inst;
 
+	//TESTING
+//	targets[idx].cyc[cpu_id][curr] = (curr)?values[0]:1;
+//	targets[idx].inst[cpu_id][curr] = (curr)?values[1]:1;
+	
 
 	//Update Values	
 	targets[idx].cyc[cpu_id][curr] = values[0];
 	targets[idx].inst[cpu_id][curr] = values[1];
-	
+
 	//Update Target Buffer
 	targets[idx].curr[cpu_id] = !curr;
 	
@@ -195,13 +201,16 @@ static int register_kp(void){
 static int my_proc_show(struct seq_file *m,void *v){
 
         int i, j;
+		uint8_t curr;
 
-		
+		//Make copy
+		memcpy(targets_cp, targets, sizeof(struct target) * NUM_FUNCS);
+			
 
         seq_printf(m, "Count: %d\n", NUM_FUNCS );
 
         for(j = 0; j < NUM_FUNCS; j++)
-                seq_printf(m, "%30s\t\t", targets[j].fn_name );
+                seq_printf(m, "%30s\t\t", targets_cp[j].fn_name );
 
         seq_printf(m, "\n");
 
@@ -213,9 +222,11 @@ static int my_proc_show(struct seq_file *m,void *v){
         for(i = 0; i < CPU_CORES; i++){
                 seq_printf(m, "CPU %d:\t", i);
 
-                for(j = 0; j < NUM_FUNCS; j++)
-                        seq_printf(m, "%llu\t\t%llu\t\t\t", targets[j].inst[i][!targets[j].curr[i]], targets[j].cyc[i][!targets[j].curr[i]]);
-                seq_printf(m, "\n");
+                for(j = 0; j < NUM_FUNCS; j++){
+						curr = targets_cp[j].curr[i];
+                        seq_printf(m, "\t%llu\t\t%llu\t\t\t", targets_cp[j].inst[i][!curr], targets_cp[j].cyc[i][!curr]);
+               	}
+				seq_printf(m, "\n");
 
         }
 

@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Invalid Evaluation</title>
+		<script src="https://cdn.jsdelivr.net/npm/vega@5.29.0"></script>
+		<script src="https://cdn.jsdelivr.net/npm/vega-lite@5.19.0"></script>
+		<script src="https://cdn.jsdelivr.net/npm/vega-embed@6.25.0"></script>
+	</head>
+	<body>
+		<div id="ipc_histo"></div>
+
+	<script type="text/javascript">
+		var IPC_Histo = {
+			"title":"Entry Counts",	
+			"$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+			"data": {"url": "data/invalid_6/data.json"},
+			"transform": [
+				{"calculate": "((datum.Inst == 1 &&  datum.Cyc != 1) || (datum.Inst != 1 &&  datum.Cyc == 1) ) ? true : false", "as": "invalid"},
+			],
+			"encoding": {
+				"x": {
+					"field": "invalid"
+				},
+				"y": {"aggregate": "count"},
+				"column":{"field":"Symbol"},
+			},
+			"layer":[
+				{
+					"mark": "bar",
+					"encoding": {
+				"color":{"field":"invalid"}
+					}
+				},
+				{
+
+					"mark": {
+						"type": "text",
+						"align": "top",
+						"baseline": "middle",
+					},
+					"encoding": {
+						"x": {
+							"field": "invalid"
+						},
+						"text": {"aggregate":"count"}
+					}
+
+				}
+			]
+		}
+vegaEmbed('#ipc_histo', IPC_Histo);
+		</script>
+	</body>
+</html>
+
