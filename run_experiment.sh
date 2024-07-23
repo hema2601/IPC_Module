@@ -1,10 +1,10 @@
 
 current_path=/home/hema/IPC_Module/
-remote_client_addr=hema@115.145.178.17
-server_ip=10.0.0.3
+remote_client_addr=hema@115.145.179.191
+server_ip=10.0.0.2
 
 exp_name=${1:-exp}
-intf=${2:-ens4}
+intf=${2:-ens10f1}
 num_queue=${3:-6}
 core_start=${4:-0}
 core_num=${5:-6}
@@ -33,13 +33,13 @@ insmod $current_path/module/IPC_module.ko
 gcc accessor.c
 
 # Get "Before" Values
-$current_path/scripts/before.sh
+$current_path/scripts/before.sh $intf
 
 # Run iperf3
 taskset -c "$core_start-$((core_start + core_num - 1))" iperf3 -s -1 & ssh $remote_client_addr "iperf3 -c ${server_ip} -P ${conns} > /dev/null"&
 
 # Wait a little
-sleep 23
+sleep 6
 
 # Run accessor
 ./a.out -t $time -c $core_start-$((core_start + core_num - 1)) $exp_name 
@@ -48,7 +48,7 @@ sleep 23
 
 
 # Get "After" Values
-$current_path/scripts/after.sh $exp_name
+$current_path/scripts/after.sh $exp_name $intf
 
 # Apply File Transformation
 python3 file_formatter.py $exp_name IRQ SOFTIRQ PACKET_CNT

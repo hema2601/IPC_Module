@@ -15,7 +15,7 @@ core=$target
 
 for i in $( get_irq_list $intf );
 do
-    echo $(int2hex $core) > /proc/irq/$i/smp_affinity;
+    echo $(core_to_affinity $core)  > /proc/irq/$i/smp_affinity;
     cat /proc/irq/$i/smp_affinity;
 	core=$((core + 1))
 done 

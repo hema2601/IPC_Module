@@ -1,8 +1,9 @@
 #!/bin/bash
 
 name=${1}
+intf=${2:-ens10f1}
 
-ethtool -S ens4 | grep packets > after_pkt.txt
+ethtool -S $intf | grep packets > after_pkt.txt
 cat /proc/softirqs | grep NET_ > after_soft_irq.txt 
 cat /proc/interrupts | grep -f tmp.txt > after_irq.txt 
 
