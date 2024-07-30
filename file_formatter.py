@@ -8,9 +8,10 @@ class Filetype(Enum):
     PACKET_CNT  = 1
     SOFTIRQ     = 2
     IRQ         = 3
+    IPERF       = 4
 
 
-Filetype = Enum('Filetype', ['PACKET_CNT', 'SOFTIRQ', 'IRQ'])
+Filetype = Enum('Filetype', ['PACKET_CNT', 'SOFTIRQ', 'IRQ', 'IPERF'])
 
 
 class JsonGenerator:
@@ -155,6 +156,47 @@ class PACKET_CNTGen(JsonGenerator):
                 self.json_dict.append(elem)
 
 
+class IPERFGen(JsonGenerator):
+
+    def generate_json(self):
+        print("Generate iperf.json")
+        self.f.seek(0)
+        self.f.truncate()
+        json.dump(self.json_dict, self.f, indent=0)
+
+    def read_source(self):
+        print("Read original iperf.json")
+        tmp_dict = json.load(self.f)
+        conns = list()
+
+        for conn in tmp_dict["start"]["connected"]:
+            elem = dict()
+            elem["Socket"] = conn["socket"]
+            elem["NAPI_ID"] = 0
+            conns.append(elem)
+
+        for interval in tmp_dict["intervals"]:
+
+            for stream in interval["streams"]:
+                elem = dict()
+                elem["bps"] = stream["bits_per_second"]
+                elem["t"] = stream["end"]
+                elem["Socket"] = stream["socket"]
+
+                # Check NAPI Id and save it, then add to the element
+                for conn in conns:
+                    if conn["Socket"] == stream["socket"]:
+                        if conn["NAPI_ID"] == 0 and stream["napi_id"] > 1:
+                            conn["NAPI_ID"] = stream["napi_id"]
+
+                        if conn["NAPI_ID"] != 0:
+                            elem["NAPI_ID"] = conn["NAPI_ID"]
+
+                        break
+
+                self.json_dict.append(elem)
+
+
 argc = len(sys.argv)
 
 
@@ -174,7 +216,6 @@ for target in sys.argv[2:]:
     ftype = Filetype[target]
 
     gen = JsonGenerator.instantiate(ftype, folder)
-
 
     if gen is None:
         continue

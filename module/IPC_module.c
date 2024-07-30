@@ -186,7 +186,8 @@ static int register_kp(void){
 		krp[i].kp = kp[i];
 		krp[i].handler = handler_ret;
 		krp[i].entry_handler = handler_pre;
-		krp[i].maxactive = CPU_CORES;
+		krp[i].maxactive = 1;
+		//krp[i].maxactive = CPU_CORES;
 		krp[i].data_size = sizeof(struct priv_data);
 
 		ret = register_kretprobe(&krp[i]);
