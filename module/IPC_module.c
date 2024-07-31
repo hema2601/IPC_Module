@@ -119,6 +119,13 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 	int64_t idx = (ri->rph->rp - krp); 
 	uint8_t curr = targets[idx].curr[cpu_id];
 
+	//Doublecheck to avoid any crashes from not updated values (ㅠㅠ) 
+	if(cpu_id >= NUM_CORES){
+	
+		printk(KERN_WARNING "Current CPU id is larger or equal than maximum number of CPUs (%d >= %d)\n", cpu_id, NUM_CORES);
+		return 0;
+
+	}
 
 	//get counters
 	get_counters(values);
