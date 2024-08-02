@@ -40,6 +40,30 @@ class Scatterplot{
 				"x2": {"value": {"expr": "scale('x', (MaxCyc[1] > MaxInst[1]) ? MaxInst[1] : MaxCyc[1])"}},
 				"y2": {"value": {"expr": "scale('y', (MaxCyc[1] > MaxInst[1]) ? MaxInst[1] : MaxCyc[1])"}}
 			}
+		},
+		{
+			"mark": "rule",
+			"encoding": {
+				"y": {
+					"aggregate": "mean",
+					"field": "Inst",
+					"type": "quantitative"
+				},
+				"color": {"value": "red"},
+				"size": {"value": 3}
+			}
+		},
+		{
+			"mark": "rule",
+			"encoding": {
+				"x": {
+					"aggregate": "mean",
+					"field": "Cyc",
+					"type": "quantitative"
+				},
+				"color": {"value": "red"},
+				"size": {"value": 3}
+			}
 		}
 	]
 
