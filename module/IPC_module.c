@@ -2,8 +2,9 @@
 #include <linux/module.h>
 #include <linux/kprobes.h>
 #include <linux/bpf.h>
-#include<linux/proc_fs.h>
-#include<linux/seq_file.h>
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
+#include <linux/skbuff.h>
 
 #define NUM_FUNCS 3
 
@@ -13,12 +14,22 @@
 #define FIXED_CTR_INST 0x309U
 #define FIXED_CTR_CYC  0x30AU
 
+#define ACTIVE_PROBES 1
+
+struct work_done {
+
+	uint64_t pkts;
+	uint64_t bytes;
+
+} work_done[CPU_CORES];
+
 struct target {
 
 	char fn_name[50];
 	volatile uint8_t curr[CPU_CORES];
 	volatile uint64_t inst[CPU_CORES][2];
 	volatile uint64_t cyc[CPU_CORES][2];
+	volatile struct work_done wrk[CPU_CORES][2];
 
 };
 
@@ -27,8 +38,9 @@ struct priv_data{
 	int id;
 	uint64_t tmp_inst;
 	uint64_t tmp_cyc;
-
+	struct work_done tmp_wrk;
 };
+
 
 static struct target targets[NUM_FUNCS] = {
 		{
@@ -48,6 +60,10 @@ static struct target targets_cp[NUM_FUNCS];
 
 static struct kprobe kp[NUM_FUNCS];
 static struct kretprobe krp[NUM_FUNCS];
+
+static struct kprobe wrk_kp = {
+	.symbol_name = "tcp_queue_rcv"
+};
 
 static uint64_t read_msr(uint32_t addr){
 
@@ -69,7 +85,7 @@ static uint64_t read_msr(uint32_t addr){
 
 } 
 
-static void get_counters(uint64_t *values){
+static void get_counters(uint64_t *values, int cid){
 
 	uint64_t cycles, inst;
 
@@ -87,48 +103,89 @@ static void get_counters(uint64_t *values){
 
 	values[0] = cycles;
 	values[1] = inst;
+	values[2] = work_done[cid].pkts;
+	values[3] = work_done[cid].bytes;
+}
+
+static void collect_work_done (struct kprobe *p, struct pt_regs *regs, unsigned long flags){
+
+	//skb passed as second argument to tcp_queue_rcv
+	struct sk_buff *skb = (struct sk_buff*)regs->si;
+	int cpu_id;	
+
+	cpu_id = smp_processor_id();
+
+	//Doublecheck to avoid any crashes from not updated values (ㅠㅠ) 
+	if(cpu_id >= CPU_CORES){
+	
+		printk(KERN_WARNING "Current CPU id is larger or equal than maximum number of CPUs (%d >= %d)\n", cpu_id, CPU_CORES);
+		return;
+
+	}
+
+	work_done[cpu_id].pkts++;
+	//[TODO] Figure out how to use skb->len in a case where it includes both the header and data length
+	work_done[cpu_id].bytes += (skb->data_len) ? skb->data_len
+									   		   : skb->len;
 
 }
 
 static int handler_pre (struct kretprobe_instance *ri, struct pt_regs *regs){
 
-	uint64_t values[2];
+	uint64_t values[4];
 	struct priv_data *tmps = (struct priv_data*)ri->data;
 	int cpu_id;
+	
 
 	//get cpu number
 	cpu_id = smp_processor_id();
 	tmps->id = cpu_id;
+	
+	//Doublecheck to avoid any crashes from not updated values (ㅠㅠ) 
+	if(cpu_id >= CPU_CORES){
+	
+		printk(KERN_WARNING "Current CPU id is larger or equal than maximum number of CPUs (%d >= %d)\n", cpu_id, CPU_CORES);
+		return 0;
+
+	}
 
 	//get counters
-	get_counters(values);
+	get_counters(values, cpu_id);
 
 	//safe them for later use
 	tmps->tmp_cyc = values[0];
 	tmps->tmp_inst = values[1];
+	tmps->tmp_wrk.pkts = values[2];
+	tmps->tmp_wrk.bytes = values[3];
 
 	return 0;
 }
 
+inline void overflow_assign(uint64_t *value, uint64_t tmp){
+	
+	if(likely(*value >= tmp))	*value -= tmp;
+	else						*value += 0xFFFFFFFFFFFFFFFFU - tmp;							
+
+}
 
 static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 
-	uint64_t values[2];
+	uint64_t values[4];
 	int cpu_id = smp_processor_id();
 	struct priv_data *tmps = (struct priv_data*)ri->data;
 	int64_t idx = (ri->rph->rp - krp); 
 	uint8_t curr = targets[idx].curr[cpu_id];
 
 	//Doublecheck to avoid any crashes from not updated values (ㅠㅠ) 
-	if(cpu_id >= NUM_CORES){
+	if(cpu_id >= CPU_CORES){
 	
-		printk(KERN_WARNING "Current CPU id is larger or equal than maximum number of CPUs (%d >= %d)\n", cpu_id, NUM_CORES);
+		printk(KERN_WARNING "Current CPU id is larger or equal than maximum number of CPUs (%d >= %d)\n", cpu_id, CPU_CORES);
 		return 0;
 
 	}
 
 	//get counters
-	get_counters(values);
+	get_counters(values, cpu_id);
 
 	if(tmps->id != cpu_id){
 
@@ -138,10 +195,10 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 	}
  
 	//calculate difference + Overflow Consideration
-	if(likely(values[0] > tmps->tmp_cyc))	values[0] -= tmps->tmp_cyc;
-	else									values[0] += 0xFFFFFFFFFFFFFFFFU - tmps->tmp_cyc;							
-	if(likely(values[1] > tmps->tmp_inst))	values[1] -= tmps->tmp_inst;	
-	else									values[1] += 0xFFFFFFFFFFFFFFFFU - tmps->tmp_inst;
+	overflow_assign(&values[0], tmps->tmp_cyc);
+	overflow_assign(&values[1], tmps->tmp_inst);
+	overflow_assign(&values[2], tmps->tmp_wrk.pkts);
+	overflow_assign(&values[3], tmps->tmp_wrk.bytes);
 
 	//TESTING
 //	targets[idx].cyc[cpu_id][curr] = (curr)?values[0]:1;
@@ -151,6 +208,8 @@ static int handler_ret (struct kretprobe_instance *ri, struct pt_regs *regs){
 	//Update Values	
 	targets[idx].cyc[cpu_id][curr] = values[0];
 	targets[idx].inst[cpu_id][curr] = values[1];
+	targets[idx].wrk[cpu_id][curr].pkts = values[2];
+	targets[idx].wrk[cpu_id][curr].bytes = values[3];
 
 	//Update Target Buffer
 	targets[idx].curr[cpu_id] = !curr;
@@ -193,8 +252,7 @@ static int register_kp(void){
 		krp[i].kp = kp[i];
 		krp[i].handler = handler_ret;
 		krp[i].entry_handler = handler_pre;
-		krp[i].maxactive = 1;
-		//krp[i].maxactive = CPU_CORES;
+		krp[i].maxactive = ACTIVE_PROBES;
 		krp[i].data_size = sizeof(struct priv_data);
 
 		ret = register_kretprobe(&krp[i]);
@@ -224,7 +282,7 @@ static int my_proc_show(struct seq_file *m,void *v){
 
         seq_printf(m, "CPU\t" );
         for(j = 0; j < NUM_FUNCS; j++)
-                seq_printf(m,"Instructions\tCycles\t\t\t");
+                seq_printf(m,"Instructions\tCycles\t\t\tWork\t\t\t");
         seq_printf(m, "\n");
 
         for(i = 0; i < CPU_CORES; i++){
@@ -232,7 +290,7 @@ static int my_proc_show(struct seq_file *m,void *v){
 
                 for(j = 0; j < NUM_FUNCS; j++){
 						curr = targets_cp[j].curr[i];
-                        seq_printf(m, "\t%llu\t\t%llu\t\t\t", targets_cp[j].inst[i][!curr], targets_cp[j].cyc[i][!curr]);
+                        seq_printf(m, "\t%llu\t\t%llu\t\t\t%llu/%llu\t\t\t", targets_cp[j].inst[i][!curr], targets_cp[j].cyc[i][!curr], targets_cp[j].wrk[i][!curr].pkts, targets_cp[j].wrk[i][!curr].bytes);
                	}
 				seq_printf(m, "\n");
 
@@ -296,6 +354,13 @@ static int __init init_ipc_mod(void){
 		return ret;
 	}
 
+	//setup work-done 
+	wrk_kp.post_handler = collect_work_done;
+	ret = register_kprobe(&wrk_kp);
+	if(ret < 0){
+		printk(KERN_ERR "IPC_Module failed to register kprobe at tcp_queue_rcv (%d)\n", ret);
+		return ret;
+	}
 
 	//setup all kprobes
 	ret = register_kp();
@@ -318,6 +383,9 @@ static void __exit exit_ipc_mod(void){
 	for(i = 0; i < NUM_FUNCS; i++){
 		unregister_kretprobe(&krp[i]);
 	}
+	
+	//stop wrk_kp
+	unregister_kprobe(&wrk_kp);
 	
 	//deactivate hw counters
 
