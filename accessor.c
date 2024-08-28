@@ -84,7 +84,7 @@ void get_func_names(char *line, char **names, int count){
 void print_cpu_ipc(char *line, char **names, int count, long long unsigned t, long long unsigned ***prev, int *cpu, FILE *json_fp){
 
 	int id;
-	long long unsigned int inst, cyc;
+	long long unsigned int inst, cyc, pkts, bytes;
 	sscanf(line, "CPU %d", &id);
 
 	char *token = strtok(line, "\t");
@@ -104,12 +104,21 @@ void print_cpu_ipc(char *line, char **names, int count, long long unsigned t, lo
 		token = strtok(NULL, "\t");
 		cyc = atoi(token);
 		
+		//Work Done
+		token = strtok(NULL, "/");
+		pkts = atoi(token);
+		//printf("Pkts: %llu\n", pkts);
+		token = strtok(NULL, "\t");
+		bytes = atoi(token);
+		//printf("Bytes: %llu\n\n", bytes);
+		
+		
 		if(inst != prev[idx][id - cpu[0]][0] || cyc != prev[idx][id-cpu[0]][1]){
 			
 			if(first) first = 0;
 			else fputc(',', json_fp);
 
-			fprintf(json_fp, "{ \"t\" : %llu, \"CPU\" : %d, \"Symbol\" : \"%s\", \"Inst\" : %llu, \"Cyc\" : %llu}\n", t, id, names[idx], inst, cyc);
+			fprintf(json_fp, "{ \"t\" : %llu, \"CPU\" : %d, \"Symbol\" : \"%s\", \"Inst\" : %llu, \"Cyc\" : %llu, \"Pkts\" : %llu, \"Bytes\" : %llu}\n", t, id, names[idx], inst, cyc, pkts, bytes);
 			prev[idx][id-cpu[0]][0] = inst;
 			prev[idx][id-cpu[0]][1] = cyc;
 		}

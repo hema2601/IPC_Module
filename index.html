@@ -14,6 +14,8 @@
 		<script src="web/components/pkt_bar.js"></script>
 		<script src="web/components/napi_graph.js"></script>
 		<script src="web/components/scatterplot.js"></script>
+		<script src="web/components/pkts_histo.js"></script>
+		<script src="web/components/gbps_pred.js"></script>
 			</head>
 	<body>
 
@@ -32,10 +34,12 @@
 		<div id="ipc_scat3"></div>
 		<div id="ipc_histo"></div>
 		<div id="ipc_box"></div>
+		<div id="pkts_histo"></div>
 		<div id="pkt_bar"></div>
 		<div id="sirq_bar"></div>
 		<div id="hirq_bar"></div>
 		<div id="napi_graph"></div>
+		<div id="gbps_pred"></div>
 
 	<script type="text/javascript">
 
@@ -299,7 +303,7 @@ var Inst_Cyc_Scatter3 = {
 	]
 
 }
-	fetchJSONData(path.concat("data.json"), ['#ipc_t', '#ipc_histo', '#ipc_box', '#ipc_scat1', '#ipc_scat2', '#ipc_scat3'], [IPC_Time, IPC_Histo, IPC_Box, Inst_Cyc_Scatter1, Inst_Cyc_Scatter2, Inst_Cyc_Scatter3])
+	fetchJSONData(path.concat("data.json"), ['#ipc_t', '#ipc_histo', '#ipc_box', '#ipc_scat1', '#ipc_scat2', '#ipc_scat3', '#pkts_histo', '#gbps_pred'], [IPC_Time, IPC_Histo, IPC_Box, Inst_Cyc_Scatter1, Inst_Cyc_Scatter2, Inst_Cyc_Scatter3, pkts_histo, gbps_pred])
 	fetchJSONData(path.concat("packet_cnt.json"), ['#pkt_bar'], [pkt_bar])
 	fetchJSONData(path.concat("softirq.json"), ['#sirq_bar'], [sirq_bar])
 	fetchJSONData(path.concat("irq.json"), ['#hirq_bar'], [hirq_bar])

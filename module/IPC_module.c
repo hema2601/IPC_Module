@@ -237,7 +237,6 @@ static int activate_hw_count(void){
 
 }
 
-//[TODO]
 static int register_kp(void){
 
 	int i, ret;
